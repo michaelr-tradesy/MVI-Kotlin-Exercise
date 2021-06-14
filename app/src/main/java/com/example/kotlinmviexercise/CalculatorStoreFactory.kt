@@ -8,9 +8,14 @@ import com.arkivanov.mvikotlin.keepers.statekeeper.ExperimentalStateKeeperApi
 import com.arkivanov.mvikotlin.keepers.statekeeper.StateKeeper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 
 @ExperimentalStateKeeperApi
-internal class CalculatorStoreFactory(private val storeFactory: StoreFactory) {
+internal class CalculatorStoreFactory(
+    private val storeFactory: StoreFactory,
+    private val mainContext: CoroutineContext = Dispatchers.Main,
+    private val calculationContext: CoroutineContext = Dispatchers.Default
+) {
 
     fun create(stateKeeper: StateKeeper<CalculatorStore.State>?): CalculatorStore =
         // Make sure the values of the generics are consistent with the store.
@@ -36,25 +41,26 @@ internal class CalculatorStoreFactory(private val storeFactory: StoreFactory) {
         }
     }
 
-    private val bootstrapper = BootstrapperImpl()
-    private val executorImpl = ExecutorImpl()
+    private val bootstrapper = BootstrapperImpl(calculationContext)
+    private val executorImpl = ExecutorImpl(calculationContext)
     private val executor: () -> Executor<CalculatorStore.Intent, Action, CalculatorStore.State, Result, CalculatorStore.Label> = {
         executorImpl
     }
 
-    private sealed class Action {
+    sealed class Action {
         class Sum(val n: Int): Action()
         class SetValue(val value: Long): Action()
     }
 
-    private class BootstrapperImpl: SuspendBootstrapper<Action>() {
+    private class BootstrapperImpl(private val calculationContext: CoroutineContext): SuspendBootstrapper<Action>() {
         override suspend fun bootstrap() {
-            val sum = withContext(Dispatchers.Default) { (1L..1000000.toLong()).sum() }
+            val sum = withContext(calculationContext) { (1L..1000000.toLong()).sum() }
             dispatch(Action.SetValue(sum))
         }
     }
 
-    private class ExecutorImpl : SuspendExecutor<CalculatorStore.Intent, Action, CalculatorStore.State, Result, CalculatorStore.Label>() {
+    private class ExecutorImpl(private val calculationContext: CoroutineContext)
+        : SuspendExecutor<CalculatorStore.Intent, Action, CalculatorStore.State, Result, CalculatorStore.Label>() {
         override suspend fun executeIntent(intent: CalculatorStore.Intent, getState: () -> CalculatorStore.State) =
             when (intent) {
                 is CalculatorStore.Intent.Increment -> dispatch(Result.Value(getState().value + 1))
@@ -69,7 +75,7 @@ internal class CalculatorStoreFactory(private val storeFactory: StoreFactory) {
             }
 
         private suspend fun sum(n: Int) {
-            val sum = withContext(Dispatchers.Default) { (1L..n.toLong()).sum() }
+            val sum = withContext(calculationContext) { (1L..n.toLong()).sum() }
             dispatch(Result.Value(sum))
         }
     }

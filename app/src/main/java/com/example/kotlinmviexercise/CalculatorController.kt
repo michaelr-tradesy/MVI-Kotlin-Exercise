@@ -93,5 +93,4 @@ class DefaultCalculatorController(
     override fun onDecrement() {
         dispatch(CalculatorView.Event.DecrementClicked)
     }
-
 }
