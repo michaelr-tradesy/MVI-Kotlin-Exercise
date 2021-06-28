@@ -31,9 +31,17 @@ class CalculatorStoreTest {
 
     @Test
     fun `When created THEN initial value calculated`() {
+        // This is a global property within KotlinMVI
         isAssertOnMainThreadEnabled = false
         Dispatchers.setMain(coroutineDispatcher)
-        val store = store()
+
+        val store = CalculatorStoreFactory(
+            storeFactory = DefaultStoreFactory,
+            mainContext = coroutineDispatcher,
+            calculationContext = coroutineDispatcher
+        ).create(
+            stateKeeper = null
+        )
         assertEquals(INITIAL_VALUE, store.state.value)
         Dispatchers.resetMain()
         coroutineDispatcher.cleanupTestCoroutines()
