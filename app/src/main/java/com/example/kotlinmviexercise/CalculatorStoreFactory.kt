@@ -1,87 +1,57 @@
 package com.example.kotlinmviexercise
 
-import com.arkivanov.mvikotlin.core.store.*
-import com.arkivanov.mvikotlin.core.utils.JvmSerializable
-import com.arkivanov.mvikotlin.extensions.coroutines.SuspendBootstrapper
+import com.arkivanov.mvikotlin.core.store.Executor
+import com.arkivanov.mvikotlin.core.store.Store
+import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.extensions.coroutines.SuspendExecutor
 import com.arkivanov.mvikotlin.keepers.statekeeper.ExperimentalStateKeeperApi
 import com.arkivanov.mvikotlin.keepers.statekeeper.StateKeeper
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.CoroutineContext
 
 @ExperimentalStateKeeperApi
-internal class CalculatorStoreFactory(
-    private val storeFactory: StoreFactory,
-    private val mainContext: CoroutineContext = Dispatchers.Main,
-    private val calculationContext: CoroutineContext = Dispatchers.Default
-) {
+internal class CalculatorStoreFactory(private val storeFactory: StoreFactory) {
+
+    private val initialValue = 0L
 
     fun create(stateKeeper: StateKeeper<CalculatorStore.State>?): CalculatorStore =
         // Make sure the values of the generics are consistent with the store.
-        object : CalculatorStore, Store<CalculatorStore.Intent, CalculatorStore.State, CalculatorStore.Label> by storeFactory.create(
+        object : CalculatorStore, Store<CalculatorStore.Intent, CalculatorStore.State, CalculatorStore.State> by storeFactory.create(
             name = "CounterStore",
-            initialState = CalculatorStore.State(),
-            bootstrapper = bootstrapper,
+            initialState = CalculatorStore.State(initialValue),
             executorFactory = executor,
-            reducer = reducer
+            reducer = { it }
         ){
         }.also {
             stateKeeper?.register {
                 // We can reset any transient state here
-                it.state.copy(value = 0)
+                it.state.copy(value = initialValue)
             }
         }
 
-    private object reducer : Reducer<CalculatorStore.State, Result> {
-        override fun CalculatorStore.State.reduce(result: Result): CalculatorStore.State {
-            return when (result) {
-                is Result.Value -> CalculatorStore.State(result.value)
-            }
-        }
-    }
-
-    private val bootstrapper = BootstrapperImpl(calculationContext)
-    private val executorImpl = ExecutorImpl(calculationContext)
-    private val executor: () -> Executor<CalculatorStore.Intent, Action, CalculatorStore.State, Result, CalculatorStore.Label> = {
+    private val executorImpl = ExecutorImpl()
+    private val executor: () -> Executor<CalculatorStore.Intent, Nothing, CalculatorStore.State, CalculatorStore.State, CalculatorStore.State> = {
         executorImpl
     }
 
-    sealed class Action {
-        class Sum(val n: Int): Action()
-        class SetValue(val value: Long): Action()
-    }
-
-    private class BootstrapperImpl(private val calculationContext: CoroutineContext): SuspendBootstrapper<Action>() {
-        override suspend fun bootstrap() {
-            val sum = withContext(calculationContext) { (1L..1000000.toLong()).sum() }
-            dispatch(Action.SetValue(sum))
-        }
-    }
-
-    private class ExecutorImpl(private val calculationContext: CoroutineContext)
-        : SuspendExecutor<CalculatorStore.Intent, Action, CalculatorStore.State, Result, CalculatorStore.Label>() {
+    private class ExecutorImpl
+        : SuspendExecutor<CalculatorStore.Intent, Nothing, CalculatorStore.State, CalculatorStore.State, CalculatorStore.State>() {
         override suspend fun executeIntent(intent: CalculatorStore.Intent, getState: () -> CalculatorStore.State) =
             when (intent) {
-                is CalculatorStore.Intent.Increment -> dispatch(Result.Value(getState().value + 1))
-                is CalculatorStore.Intent.Decrement -> dispatch(Result.Value(getState().value - 1))
-                is CalculatorStore.Intent.Sum -> sum(intent.n)
+                is CalculatorStore.Intent.Increment -> {
+                    val output = CalculatorStore.State(getState().value + 1)
+                    broadcast(output)
+                }
+                is CalculatorStore.Intent.Decrement -> {
+                    val output = CalculatorStore.State(getState().value - 1)
+                    broadcast(output)
+                }
             }
 
-        override suspend fun executeAction(action: Action, getState: () -> CalculatorStore.State) =
-            when (action) {
-                is Action.Sum -> sum(action.n)
-                is Action.SetValue -> dispatch(Result.Value(action.value))
-            }
-
-        private suspend fun sum(n: Int) {
-            val sum = withContext(calculationContext) { (1L..n.toLong()).sum() }
-            dispatch(Result.Value(sum))
+        private fun broadcast(output: CalculatorStore.State) {
+            //Dispatch the `Result` to the [Reducer], which will `update the `State`
+            dispatch(output)
+            //Immediately send the `Label` to the [Store] for publication
+            publish(output)
         }
-    }
-
-    sealed class Result : JvmSerializable {
-        data class Value(val value: Long) : Result()
     }
 }
 

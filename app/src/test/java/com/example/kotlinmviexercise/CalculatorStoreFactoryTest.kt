@@ -36,9 +36,7 @@ class CalculatorStoreTest {
         Dispatchers.setMain(coroutineDispatcher)
 
         val store = CalculatorStoreFactory(
-            storeFactory = DefaultStoreFactory,
-            mainContext = coroutineDispatcher,
-            calculationContext = coroutineDispatcher
+            storeFactory = DefaultStoreFactory
         ).create(
             stateKeeper = null
         )
@@ -76,30 +74,14 @@ class CalculatorStoreTest {
         isAssertOnMainThreadEnabled = true
     }
 
-    @Test
-    fun `When intent sum 5 THEN value is 15`() {
-        isAssertOnMainThreadEnabled = false
-        Dispatchers.setMain(coroutineDispatcher)
-
-        val store = store()
-
-        store.accept(CalculatorStore.Intent.Sum(n = 5))
-
-        assertEquals(15, store.state.value)
-        Dispatchers.resetMain()
-        coroutineDispatcher.cleanupTestCoroutines()
-    }
-
     private fun store(): CalculatorStore =
         CalculatorStoreFactory(
-            storeFactory = DefaultStoreFactory,
-            mainContext = coroutineDispatcher,
-            calculationContext = coroutineDispatcher
+            storeFactory = DefaultStoreFactory
         ).create(
             stateKeeper = null
         )
 
     private companion object {
-        private const val INITIAL_VALUE = 500000500000
+        private const val INITIAL_VALUE = 0L
     }
 }
