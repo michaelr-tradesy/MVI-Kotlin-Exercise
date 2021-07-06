@@ -15,6 +15,7 @@ import com.arkivanov.mvikotlin.keepers.statekeeper.StateKeeper
 import com.arkivanov.mvikotlin.logging.store.LoggingStoreFactory
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.arkivanov.mvikotlin.timetravel.store.TimeTravelStoreFactory
+import com.badoo.reaktive.observable.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
 
 interface CalculatorController {
@@ -51,13 +52,17 @@ class DefaultCalculatorController(
         binder =
             com.arkivanov.mvikotlin.extensions.reaktive.bind {
 
+                store.states.distinctUntilChanged { original: CalculatorStore.State, latest: CalculatorStore.State ->
+                    println("CounterStore: store.states.distinctUntilChanged: original=[$original] latest=[$latest]")
+                    flow.value = latest.value
+                    true
+                }
                 store.states.bindTo {
+                    println("CounterStore: store.states(): New State=($it)...")
                     flow.value = it.value
-                    println("store.states(): New State=($it)...")
                 }
                 store.labels.bindTo {
-                    flow.value = it.value
-                    println("store.labels(): New Label=($it)...")
+                    println("CounterStore: store.labels(): New Label=($it)...")
                 }
             }
     }

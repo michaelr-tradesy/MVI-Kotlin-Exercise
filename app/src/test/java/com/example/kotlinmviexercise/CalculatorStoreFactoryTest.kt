@@ -36,7 +36,8 @@ class CalculatorStoreTest {
         Dispatchers.setMain(coroutineDispatcher)
 
         val store = CalculatorStoreFactory(
-            storeFactory = DefaultStoreFactory
+            storeFactory = DefaultStoreFactory,
+            calculationContext = coroutineDispatcher
         ).create(
             stateKeeper = null
         )
@@ -76,12 +77,13 @@ class CalculatorStoreTest {
 
     private fun store(): CalculatorStore =
         CalculatorStoreFactory(
-            storeFactory = DefaultStoreFactory
+            storeFactory = DefaultStoreFactory,
+            calculationContext = coroutineDispatcher
         ).create(
             stateKeeper = null
         )
 
     private companion object {
-        private const val INITIAL_VALUE = 0L
+        private const val INITIAL_VALUE = 500000500000L
     }
 }
