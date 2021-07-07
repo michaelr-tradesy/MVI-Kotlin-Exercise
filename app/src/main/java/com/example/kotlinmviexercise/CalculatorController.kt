@@ -15,7 +15,6 @@ import com.arkivanov.mvikotlin.keepers.statekeeper.StateKeeper
 import com.arkivanov.mvikotlin.logging.store.LoggingStoreFactory
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.arkivanov.mvikotlin.timetravel.store.TimeTravelStoreFactory
-import com.badoo.reaktive.observable.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
 
 interface CalculatorController {
@@ -52,11 +51,6 @@ class DefaultCalculatorController(
         binder =
             com.arkivanov.mvikotlin.extensions.reaktive.bind {
 
-                store.states.distinctUntilChanged { original: CalculatorStore.State, latest: CalculatorStore.State ->
-                    println("CounterStore: store.states.distinctUntilChanged: original=[$original] latest=[$latest]")
-                    flow.value = latest.value
-                    true
-                }
                 store.states.bindTo {
                     println("CounterStore: store.states(): New State=($it)...")
                     flow.value = it.value
@@ -76,10 +70,10 @@ class DefaultCalculatorController(
     }
 
     override fun onIncrement() {
-        store.accept(CalculatorStore.Intent.Increment)
+        store.accept(CalculatorStore.Intent.Increment(store.state.value))
     }
 
     override fun onDecrement() {
-        store.accept(CalculatorStore.Intent.Decrement)
+        store.accept(CalculatorStore.Intent.Decrement(store.state.value))
     }
 }

@@ -14,8 +14,8 @@ interface CalculatorStore : Store<CalculatorStore.Intent, CalculatorStore.State,
     }
 
     sealed class Intent: JvmSerializable {
-        object Increment : Intent()
-        object Decrement : Intent()
+        data class Increment(val value: Long = 0L) : Intent()
+        data class Decrement (val value: Long = 0L): Intent()
         object Sum : Intent()
     }
 

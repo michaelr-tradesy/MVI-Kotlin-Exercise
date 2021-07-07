@@ -31,16 +31,11 @@ class CalculatorStoreTest {
 
     @Test
     fun `When created THEN initial value calculated`() {
-        // This is a global property within KotlinMVI
         isAssertOnMainThreadEnabled = false
         Dispatchers.setMain(coroutineDispatcher)
 
-        val store = CalculatorStoreFactory(
-            storeFactory = DefaultStoreFactory,
-            calculationContext = coroutineDispatcher
-        ).create(
-            stateKeeper = null
-        )
+        val store = CalculatorStoreFactory(storeFactory = DefaultStoreFactory)
+            .create(stateKeeper = null)
         assertEquals(INITIAL_VALUE, store.state.value)
         Dispatchers.resetMain()
         coroutineDispatcher.cleanupTestCoroutines()
@@ -53,7 +48,7 @@ class CalculatorStoreTest {
 
         val store = store()
 
-        store.accept(CalculatorStore.Intent.Increment)
+        store.accept(CalculatorStore.Intent.Increment(store.state.value))
 
         assertEquals(INITIAL_VALUE + 1, store.state.value)
         Dispatchers.resetMain()
@@ -67,7 +62,7 @@ class CalculatorStoreTest {
 
         val store = store()
 
-        store.accept(CalculatorStore.Intent.Decrement)
+        store.accept(CalculatorStore.Intent.Decrement(store.state.value))
 
         assertEquals(INITIAL_VALUE - 1, store.state.value)
         Dispatchers.resetMain()
@@ -76,14 +71,9 @@ class CalculatorStoreTest {
     }
 
     private fun store(): CalculatorStore =
-        CalculatorStoreFactory(
-            storeFactory = DefaultStoreFactory,
-            calculationContext = coroutineDispatcher
-        ).create(
-            stateKeeper = null
-        )
+        CalculatorStoreFactory(storeFactory = DefaultStoreFactory).create(stateKeeper = null)
 
     private companion object {
-        private const val INITIAL_VALUE = 500000500000L
+        private const val INITIAL_VALUE = 0L
     }
 }
